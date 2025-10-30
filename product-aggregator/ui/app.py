@@ -626,3 +626,29 @@ def main():
 
     if __name__ == "__main__":
         main()
+cd /d D:\Projects\just_one
+
+# is this a git repo (prints repo root) or errors if not
+git rev-parse --show-toplevel
+
+# quick status (uncommitted changes)
+git status --porcelain
+
+# does .git exist?
+Test-Path -Path .git
+
+# remote URLs
+git remote -v
+
+# current local branch
+git branch --show-current
+
+# remote branches that exist
+git fetch origin
+git branch -r
+
+# last local commit
+git log -1 --oneline
+
+# check if your branch exists on origin (replace name if different)
+git ls-remote --heads origin kiran-final-streamlit
