@@ -1,3 +1,5 @@
-from jiomart_scraper import scrape_jiomart
+from scrapers.jiomart_scraper import scrape_jiomart
 
-print(scrape_jiomart("Basket"))
+
+if __name__ == "__main__":
+	print(scrape_jiomart("Basket"))

@@ -1,3 +1,5 @@
-from flipkart_scraper import scrape_flipkart
+from scrapers.flipkart_scraper import scrape_flipkart
 
-print(scrape_flipkart("Travel bag"))
+
+if __name__ == "__main__":
+	print(scrape_flipkart("Travel bag"))

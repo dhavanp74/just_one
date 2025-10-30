@@ -1,12 +1,17 @@
-import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def scrape_jiomart(product_name, max_results=15):
-    driver = uc.Chrome()
+from scrapers.base_scraper import make_driver
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+def scrape_jiomart(product_name, max_results=15, headless: bool = True):
+    driver = make_driver(headless=headless)
     results = []
     try:
         driver.get("https://www.jiomart.com/")
@@ -27,7 +32,7 @@ def scrape_jiomart(product_name, max_results=15):
 
         # Find product blocks (each product link, usually /p/ or /product/)
         blocks = driver.find_elements(By.XPATH, "//a[contains(@href, '/p/') or contains(@href, '/product/')]")
-        print(f"Found {len(blocks)} product links with XPath.")
+        logger.debug("Found %d product links with XPath.", len(blocks))
 
         used_titles = set()
         for item in blocks:
@@ -43,10 +48,10 @@ def scrape_jiomart(product_name, max_results=15):
                 price_tag = None
                 try:
                     price_tag = item.find_element(By.XPATH, "ancestor::div[contains(@class, 'plp-card-details')]//*[contains(text(),'₹') or contains(text(),'Rs')]")
-                except:
+                except Exception:
                     try:
                         price_tag = item.find_element(By.XPATH, "../../..//*[contains(text(),'₹') or contains(text(),'Rs')]")
-                    except:
+                    except Exception:
                         pass
                 if price_tag:
                     price_txt = price_tag.text.replace(",", "").replace("₹", "").replace("Rs", "").strip().split()[0]
@@ -60,7 +65,7 @@ def scrape_jiomart(product_name, max_results=15):
                 try:
                     img_tag = item.find_element(By.XPATH, ".//img")
                     image = img_tag.get_attribute("src")
-                except:
+                except Exception:
                     pass
 
                 results.append({
@@ -73,10 +78,13 @@ def scrape_jiomart(product_name, max_results=15):
                 if len(results) >= max_results:
                     break
             except Exception as e:
-                print("Skip product due to error:", e)
-        print(f"[JioMart] Parsed {len(results)} unique products.")
+                logger.debug("Skip product due to error: %s", e)
+        logger.info("[JioMart] Parsed %d unique products.", len(results))
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            logger.debug("Exception while quitting driver")
     return results
 
 # Example:

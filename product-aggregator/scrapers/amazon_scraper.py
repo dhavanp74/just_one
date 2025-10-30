@@ -1,7 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
+from utils.logger import get_logger
 
-def scrape_amazon(product_name, max_results=10):
+logger = get_logger(__name__)
+
+
+def scrape_amazon(product_name, max_results=10, timeout: int = 10, retries: int = 1):
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -15,12 +19,24 @@ def scrape_amazon(product_name, max_results=10):
     query = product_name.replace(" ", "+")
     url = f"https://www.amazon.in/s?k={query}"
 
-    response = requests.get(url, headers=headers, timeout=10)
-    if response.status_code != 200:
-        print(f"❌ Amazon returned status {response.status_code}")
+    resp = None
+    last_exc = None
+    for attempt in range(1, retries + 2):
+        try:
+            resp = requests.get(url, headers=headers, timeout=timeout)
+            break
+        except Exception as e:
+            last_exc = e
+            logger.warning("Amazon request attempt %d failed: %s", attempt, e)
+    if resp is None:
+        logger.error("Amazon request failed after retries: %s", last_exc)
         return []
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    if resp.status_code != 200:
+        logger.error("Amazon returned status %d", resp.status_code)
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
     items = soup.select("div.s-result-item[data-component-type='s-search-result']")
 
     results = []

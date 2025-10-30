@@ -1,12 +1,17 @@
-import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def scrape_snapdeal(product_name, max_results=15):
-    driver = uc.Chrome()
+from scrapers.base_scraper import make_driver
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+def scrape_snapdeal(product_name, max_results=15, headless: bool = True):
+    driver = make_driver(headless=headless)
     results = []
     try:
         driver.get("https://www.snapdeal.com/")
@@ -25,7 +30,7 @@ def scrape_snapdeal(product_name, max_results=15):
 
         # Product cards: look for listing divs with product links (/product/)
         blocks = driver.find_elements(By.XPATH, "//div[contains(@class, 'product-tuple-listing')]")
-        print(f"Found {len(blocks)} product blocks.")
+        logger.debug("Found %d product blocks.", len(blocks))
 
         for block in blocks:
             try:
@@ -33,17 +38,17 @@ def scrape_snapdeal(product_name, max_results=15):
                 title = ""
                 try:
                     title = block.find_element(By.CLASS_NAME, "product-title").text.strip()
-                except:
+                except Exception:
                     try:
                         title = block.find_element(By.CLASS_NAME, "product-desc-rating").text.strip()
-                    except:
+                    except Exception:
                         continue
                 # Product link
                 link = None
                 try:
                     anchor = block.find_element(By.TAG_NAME, "a")
                     link = anchor.get_attribute("href")
-                except:
+                except Exception:
                     continue
                 # Price
                 price_val = None
@@ -52,7 +57,7 @@ def scrape_snapdeal(product_name, max_results=15):
                     price_txt = price_tag.text.replace(",", "").replace("Rs.", "").replace("₹", "").strip().split()[0]
                     if price_txt.replace('.', '', 1).isdigit():
                         price_val = float(price_txt)
-                except:
+                except Exception:
                     continue
                 if not (title and link and price_val):
                     continue
@@ -64,7 +69,7 @@ def scrape_snapdeal(product_name, max_results=15):
                     # Sometimes snapdeal uses data-src for lazy load
                     if (not image or image.strip() == "" or image.startswith("data:")):
                         image = img_tag.get_attribute("data-src")
-                except:
+                except Exception:
                     image = None
 
                 results.append({
@@ -77,10 +82,13 @@ def scrape_snapdeal(product_name, max_results=15):
                 if len(results) >= max_results:
                     break
             except Exception as e:
-                print("Skip product due to error:", e)
-        print(f"[Snapdeal] Parsed {len(results)} unique products.")
+                logger.debug("Skip product due to error: %s", e)
+        logger.info("[Snapdeal] Parsed %d unique products.", len(results))
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            logger.debug("Exception while quitting driver")
     return results
 
 # Example usage:
